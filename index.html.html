@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Malla Interactiva Horizontal - Pedagogía en Matemáticas</title>
+<style>
+  :root {
+    --color-base: #f8e7f2;
+    --color-aprobado: #d8a7c9;
+    --color-desbloqueado: #f7d9e8;
+    --color-bloqueado: #f2f2f2;
+    --color-texto: #4a2c4b;
+    --color-conexion: #cba4c6;
+    --color-fondo: #fffafa;
+  }
+  body {
+    margin: 0; padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--color-fondo);
+    color: var(--color-texto);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+  }
+  #malla-container {
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 20px;
+    gap: 40px;
+    max-width: 95vw;
+    scroll-behavior: smooth;
+  }
+  .semestre {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-width: 180px;
+  }
+  .semestre h2 {
+    text-align: center;
+    font-weight: 600;
+    margin: 0 0 10px 0;
+  }
+  .ramos-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .ramo {
+    background: var(--color-bloqueado);
+    border-radius: 10px;
+    padding: 12px 16px;
+    cursor: pointer;
+    user-select: none;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    transition: background-color 0.3s, box-shadow 0.3s;
+    position: relative;
+    font-weight: 600;
+  }
+  .ramo.aprobado {
+    background: var(--color-aprobado);
+    box-shadow: 0 0 10px 2px #d48fc7aa;
+    color: #2b1434;
+  }
+  .ramo.desbloqueado {
+    background: var(--color-desbloqueado);
+  }
+  .ramo:hover {
+    box-shadow: 0 0 15px 3px #c28cc3cc;
+  }
+  /* Líneas de conexión horizontales */
+  .conexion-horizontal {
+    position: absolute;
+    height: 3px;
+    background: var(--color-conexion);
+    top: 50%;
+    left: 100%;
+    width: 40px;
+    transform: translateY(-50%);
+  }
+  /* Responsivo para celular */
+  @media (max-width: 600px) {
+    #malla-container {
+      gap: 25px;
+      padding: 15px;
+    }
+    .semestre {
+      min-width: 140px;
+    }
+    .ramo {
+      padding: 10px 12px;
+      font-size: 14px;
+    }
+    .conexion-horizontal {
+      width: 25px;
+    }
+  }
+</style>
+</head>
+<body>
+  <div id="malla-container">
+    <!-- Semestres con ramos -->
+  </div>
+
+<script>
+  // Datos: semestres y ramos, con dependencias para desbloquear
+  const mallaData = [
+    {
+      semestre: 'Semestre 1',
+      ramos: [
+        { id: 'mat101', nombre: 'Matemática Básica', prereq: [] },
+        { id: 'ped101', nombre: 'Introducción a la Pedagogía', prereq: [] },
+        { id: 'alg101', nombre: 'Álgebra I', prereq: [] }
+      ]
+    },
+    {
+      semestre: 'Semestre 2',
+      ramos: [
+        { id: 'mat102', nombre: 'Matemática Intermedia', prereq: ['mat101'] },
+        { id: 'ped102', nombre: 'Didáctica I', prereq: ['ped101'] },
+        { id: 'alg102', nombre: 'Álgebra II', prereq: ['alg101'] }
+      ]
+    },
+    {
+      semestre: 'Semestre 3',
+      ramos: [
+        { id: 'mat201', nombre: 'Cálculo Diferencial', prereq: ['mat102'] },
+        { id: 'ped201', nombre: 'Psicología Educacional', prereq: ['ped102'] },
+        { id: 'alg201', nombre: 'Geometría', prereq: ['alg102'] }
+      ]
+    },
+    {
+      semestre: 'Semestre 4',
+      ramos: [
+        { id: 'mat202', nombre: 'Cálculo Integral', prereq: ['mat201'] },
+        { id: 'ped202', nombre: 'Evaluación y Medición', prereq: ['ped201'] },
+        { id: 'alg202', nombre: 'Estadística', prereq: ['alg201'] }
+      ]
+    },
+    {
+      semestre: 'Semestre 5',
+      ramos: [
+        { id: 'mat301', nombre: 'Matemática Discreta', prereq: ['mat202'] },
+        { id: 'ped301', nombre: 'Didáctica II', prereq: ['ped202'] },
+        { id: 'alg301', nombre: 'Análisis Matemático', prereq: ['alg202'] }
+      ]
+    },
+    {
+      semestre: 'Semestre 6',
+      ramos: [
+        { id: 'mat302', nombre: 'Ecuaciones Diferenciales', prereq: ['mat301'] },
+        { id: 'ped302', nombre: 'Proyecto Educativo', prereq: ['ped301'] },
+        { id: 'alg302', nombre: 'Topología Básica', prereq: ['alg301'] }
+      ]
+    }
+  ];
+
+  // Cargar estado guardado en localStorage
+  const estadoGuardado = JSON.parse(localStorage.getItem('mallaEstado')) || {};
+
+  // Función para saber si un ramo está aprobado
+  function estaAprobado(id) {
+    return !!estadoGuardado[id];
+  }
+  // Función para saber si un ramo está desbloqueado (todas sus prereq aprobadas)
+  function estaDesbloqueado(ramo) {
+    return ramo.prereq.every(pr => estaAprobado(pr));
+  }
+
+  // Crear la malla en HTML
+  const contenedor = document.getElementById('malla-container');
+
+  mallaData.forEach((sem, i) => {
+    const semDiv = document.createElement('div');
+    semDiv.className = 'semestre';
+
+    const titulo = document.createElement('h2');
+    titulo.textContent = sem.semestre;
+    semDiv.appendChild(titulo);
+
+    const listaRamos = document.createElement('div');
+    listaRamos.className = 'ramos-lista';
+
+    sem.ramos.forEach((ramo, idx) => {
+      const ramoDiv = document.createElement('div');
+      ramoDiv.className = 'ramo';
+
+      // Clase según estado
+      if (estaAprobado(ramo.id)) {
+        ramoDiv.classList.add('aprobado');
+      } else if (estaDesbloqueado(ramo)) {
+        ramoDiv.classList.add('desbloqueado');
+      } else {
+        // bloqueado (sin clase extra)
+      }
+
+      ramoDiv.textContent = ramo.nombre;
+      ramoDiv.title = estaAprobado(ramo.id) ? 'Aprobado' : estaDesbloqueado(ramo) ? 'Desbloqueado' : 'Bloqueado';
+
+      // Solo se puede hacer clic si está desbloqueado
+      if (estaDesbloqueado(ramo)) {
+        ramoDiv.style.cursor = 'pointer';
+        ramoDiv.addEventListener('click', () => {
+          // Alternar aprobado/no aprobado
+          if (estaAprobado(ramo.id)) {
+            delete estadoGuardado[ramo.id];
+          } else {
+            estadoGuardado[ramo.id] = true;
+          }
+          localStorage.setItem('mallaEstado', JSON.stringify(estadoGuardado));
+          actualizarMalla();
+        });
+      } else {
+        ramoDiv.style.cursor = 'not-allowed';
+      }
+
+      // Añadir línea de conexión si no es el último ramo del semestre y tiene ramosex posteriores en la misma fila (se puede quitar para simplificar)
+      if (idx < sem.ramos.length -1) {
+        const conexion = document.createElement('div');
+        conexion.className = 'conexion-horizontal';
+        ramoDiv.appendChild(conexion);
+      }
+
+      listaRamos.appendChild(ramoDiv);
+    });
+
+    semDiv.appendChild(listaRamos);
+    contenedor.appendChild(semDiv);
+  });
+
+  // Función para actualizar la malla (colores y desbloqueos)
+  function actualizarMalla() {
+    // Limpiar contenedor
+    contenedor.innerHTML = '';
+    // Repetir la creación de semestres con nuevo estado
+    mallaData.forEach((sem, i) => {
+      const semDiv = document.createElement('div');
+      semDiv.className = 'semestre';
+
+      const titulo = document.createElement('h2');
+      titulo.textContent = sem.semestre;
+      semDiv.appendChild(titulo);
+
+      const listaRamos = document.createElement('div');
+      listaRamos.className = 'ramos-lista';
+
+      sem.ramos.forEach((ramo, idx) => {
+        const ramoDiv = document.createElement('div');
+        ramoDiv.className = 'ramo';
+
+        if (estaAprobado(ramo.id)) {
+          ramoDiv.classList.add('aprobado');
+        } else if (estaDesbloqueado(ramo)) {
+          ramoDiv.classList.add('desbloqueado');
+        }
+
+        ramoDiv.textContent = ramo.nombre;
+        ramoDiv.title = estaAprobado(ramo.id) ? 'Aprobado' : estaDesbloqueado(ramo) ? 'Desbloqueado' : 'Bloqueado';
+
+        if (estaDesbloqueado(ramo)) {
+          ramoDiv.style.cursor = 'pointer';
+          ramoDiv.addEventListener('click', () => {
+            if (estaAprobado(ramo.id)) {
+              delete estadoGuardado[ramo.id];
+            } else {
+              estadoGuardado[ramo.id] = true;
+            }
+            localStorage.setItem('mallaEstado', JSON.stringify(estadoGuardado));
+            actualizarMalla();
+          });
+        } else {
+          ramoDiv.style.cursor = 'not-allowed';
+        }
+
+        if (idx < sem.ramos.length -1) {
+          const conexion = document.createElement('div');
+          conexion.className = 'conexion-horizontal';
+          ramoDiv.appendChild(conexion);
+        }
+
+        listaRamos.appendChild(ramoDiv);
+      });
+
+      semDiv.appendChild(listaRamos);
+      contenedor.appendChild(semDiv);
+    });
+  }
+
+  // Primera carga
+  actualizarMalla();
+
+</script>
+</body>
+</html>
